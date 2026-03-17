@@ -207,12 +207,21 @@ describe('BizzaboClient', () => {
     const client = new BizzaboClient('test-api-key');
     const promise = client.getAll('/events');
 
+    // Attach rejection handler immediately so it's never "unhandled"
+    let rejection: Error | undefined;
+    promise.catch((e: Error) => {
+      rejection = e;
+    });
+
     // Advance timers enough for initial attempt + 2 retries + inter-page delays
     for (let i = 0; i < 10; i++) {
       await vi.advanceTimersByTimeAsync(5000);
     }
 
+    // Now assert the rejection
     await expect(promise).rejects.toThrow();
+    expect(rejection).toBeDefined();
+    expect(rejection!.message).toContain('rate_limited');
 
     vi.useRealTimers();
   });
