@@ -1,0 +1,9 @@
+{
+  "singlePage": {
+    "content": [
+      { "id": 500001, "title": "Keynote: The Future", "startTime": "2026-06-15T09:00:00Z", "endTime": "2026-06-15T10:00:00Z", "track": "Main Stage" },
+      { "id": 500002, "title": "Workshop: TypeScript MCP", "startTime": "2026-06-15T10:30:00Z", "endTime": "2026-06-15T12:00:00Z", "track": "Room A" }
+    ],
+    "page": { "number": 0, "size": 100, "totalElements": 2, "totalPages": 1 }
+  }
+}

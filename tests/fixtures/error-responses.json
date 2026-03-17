@@ -1,0 +1,6 @@
+{
+  "unauthorized": { "status": 401, "body": { "error": "Unauthorized", "message": "Invalid API key" } },
+  "notFound": { "status": 404, "body": { "error": "Not Found", "message": "Event not found" } },
+  "rateLimited": { "status": 429, "body": { "error": "Too Many Requests", "message": "Rate limit exceeded" }, "headers": { "Retry-After": "30" } },
+  "serverError": { "status": 500, "body": { "error": "Internal Server Error", "message": "Something went wrong" } }
+}

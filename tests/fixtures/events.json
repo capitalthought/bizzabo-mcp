@@ -1,0 +1,21 @@
+{
+  "singlePage": {
+    "content": [
+      { "id": 100001, "name": "ATX Web Fest 2026", "startDate": "2026-06-15", "endDate": "2026-06-17", "status": "PUBLISHED" },
+      { "id": 100002, "name": "Dev Summit", "startDate": "2026-09-10", "endDate": "2026-09-11", "status": "DRAFT" }
+    ],
+    "page": { "number": 0, "size": 100, "totalElements": 2, "totalPages": 1 }
+  },
+  "multiPage1": {
+    "content": [{ "id": 200001, "name": "Event A", "startDate": "2026-01-01", "endDate": "2026-01-02", "status": "PUBLISHED" }],
+    "page": { "number": 0, "size": 1, "totalElements": 3, "totalPages": 3 }
+  },
+  "multiPage2": {
+    "content": [{ "id": 200002, "name": "Event B", "startDate": "2026-02-01", "endDate": "2026-02-02", "status": "PUBLISHED" }],
+    "page": { "number": 1, "size": 1, "totalElements": 3, "totalPages": 3 }
+  },
+  "multiPage3": {
+    "content": [{ "id": 200003, "name": "Event C", "startDate": "2026-03-01", "endDate": "2026-03-02", "status": "PUBLISHED" }],
+    "page": { "number": 2, "size": 1, "totalElements": 3, "totalPages": 3 }
+  }
+}
