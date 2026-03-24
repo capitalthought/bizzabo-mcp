@@ -9,13 +9,20 @@ import { registerPartnerTools } from './tools/partners.js';
 import { registerAgendaTools } from './tools/agenda.js';
 import { registerRegistrationTools } from './tools/registrations.js';
 
-const apiKey = process.env.BIZZABO_API_KEY;
-if (!apiKey) {
-  process.stderr.write('Error: BIZZABO_API_KEY environment variable is required.\n');
+const clientId = process.env.BIZZABO_CLIENT_ID;
+const clientSecret = process.env.BIZZABO_CLIENT_SECRET;
+const accountId = process.env.BIZZABO_ACCOUNT_ID;
+
+if (!clientId || !clientSecret || !accountId) {
+  process.stderr.write('Error: BIZZABO_CLIENT_ID, BIZZABO_CLIENT_SECRET, and BIZZABO_ACCOUNT_ID environment variables are required.\n');
   process.exit(1);
 }
 
-const client = new BizzaboClient(apiKey);
+const client = new BizzaboClient({
+  clientId,
+  clientSecret,
+  accountId: Number(accountId),
+});
 const server = new McpServer({ name: 'bizzabo', version: '1.0.0' });
 
 registerEventTools(server, client);

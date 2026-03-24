@@ -1,8 +1,17 @@
 const BASE_URL = 'https://api.bizzabo.com/v1';
+const AUTH_URL = 'https://auth.bizzabo.com/oauth/token';
+const AUTH_AUDIENCE = 'https://api.bizzabo.com/api';
 const CACHE_TTL_MS = 60_000; // 60 seconds
+const TOKEN_REFRESH_MARGIN_MS = 300_000; // refresh 5 min before expiry
 const DEBUG = process.env.DEBUG === '1';
 
 // ─── Types ───────────────────────────────────────────────────────────
+
+export interface OAuthCredentials {
+  clientId: string;
+  clientSecret: string;
+  accountId: number;
+}
 
 export interface PaginatedResponse<T = unknown> {
   content: T[];
@@ -67,14 +76,56 @@ interface CacheEntry<T = unknown> {
 // ─── Client ──────────────────────────────────────────────────────────
 
 export class BizzaboClient {
-  private apiKey: string;
+  private credentials: OAuthCredentials;
+  private accessToken: string | null = null;
+  private tokenExpiresAt = 0;
   private cache = new Map<string, CacheEntry>();
 
-  constructor(apiKey: string) {
-    if (!apiKey) {
-      throw new Error('BizzaboClient requires an API key');
+  constructor(credentials: OAuthCredentials) {
+    this.credentials = credentials;
+  }
+
+  /**
+   * Get a valid access token, refreshing via OAuth2 client credentials if needed.
+   */
+  private async getAccessToken(): Promise<string> {
+    if (this.accessToken && Date.now() < this.tokenExpiresAt - TOKEN_REFRESH_MARGIN_MS) {
+      return this.accessToken;
     }
-    this.apiKey = apiKey;
+
+    debug('fetching new OAuth2 token');
+
+    const response = await fetch(AUTH_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Bizzabo-MCP/1.0',
+      },
+      body: JSON.stringify({
+        grant_type: 'client_credentials',
+        client_id: this.credentials.clientId,
+        client_secret: this.credentials.clientSecret,
+        account_id: this.credentials.accountId,
+        audience: AUTH_AUDIENCE,
+      }),
+    });
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      const msg = (body as Record<string, string>).message || response.statusText;
+      throw new Error(`OAuth2 token request failed (${response.status}): ${msg}`);
+    }
+
+    const data = (await response.json()) as {
+      access_token: string;
+      expires_in: number;
+    };
+
+    this.accessToken = data.access_token;
+    this.tokenExpiresAt = Date.now() + data.expires_in * 1000;
+    debug('got token, expires in', data.expires_in, 'seconds');
+
+    return this.accessToken;
   }
 
   /**
@@ -105,6 +156,7 @@ export class BizzaboClient {
 
     debug('GET', url);
 
+    const token = await this.getAccessToken();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30_000);
 
@@ -112,7 +164,7 @@ export class BizzaboClient {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${this.apiKey}`,
+          Authorization: `Bearer ${token}`,
           Accept: 'application/json',
         },
         signal: controller.signal,
@@ -156,6 +208,7 @@ export class BizzaboClient {
     const url = `${BASE_URL}${path}`;
     debug('GET (single)', url);
 
+    const token = await this.getAccessToken();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30_000);
 
@@ -163,7 +216,7 @@ export class BizzaboClient {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${this.apiKey}`,
+          Authorization: `Bearer ${token}`,
           Accept: 'application/json',
         },
         signal: controller.signal,
@@ -273,6 +326,7 @@ export class BizzaboClient {
 
     debug('GET (page)', url);
 
+    const token = await this.getAccessToken();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30_000);
 
@@ -280,7 +334,7 @@ export class BizzaboClient {
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${this.apiKey}`,
+          Authorization: `Bearer ${token}`,
           Accept: 'application/json',
         },
         signal: controller.signal,
