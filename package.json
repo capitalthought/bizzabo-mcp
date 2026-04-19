@@ -1,15 +1,45 @@
 {
-  "name": "bizzabo-mcp",
-  "version": "1.0.0",
-  "description": "MCP server for Bizzabo event management API",
+  "name": "@capitalthought/bizzabo-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for the Bizzabo event management API — events, sessions, speakers, contacts, partners, agenda, registrations.",
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "bizzabo-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && chmod +x dist/index.js",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/capitalthought/bizzabo-mcp.git"
+  },
+  "homepage": "https://github.com/capitalthought/bizzabo-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/capitalthought/bizzabo-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "bizzabo",
+    "events",
+    "anthropic",
+    "claude"
+  ],
+  "author": "Josh Baer",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=18"
