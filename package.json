@@ -1,6 +1,6 @@
 {
   "name": "@capitalthought/bizzabo-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server for the Bizzabo event management API — events, sessions, speakers, contacts, partners, agenda, registrations.",
   "type": "module",
   "main": "dist/index.js",
@@ -36,7 +36,7 @@
     "anthropic",
     "claude"
   ],
-  "author": "Josh Baer",
+  "author": "Joshua Baer",
   "license": "MIT",
   "publishConfig": {
     "access": "public"
