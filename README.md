@@ -4,9 +4,13 @@
 
 MCP server for the [Bizzabo](https://www.bizzabo.com/) event management API. Exposes 12 tools for reading events, sessions, speakers, contacts, partners, agenda items, and registrations — wrapped in OAuth2 auth, auto-pagination, 60s caching, and 429 retry-with-backoff.
 
-## Install
+## Quick start
 
-Use directly via `npx` (no install needed):
+You need three Bizzabo OAuth2 credentials: `BIZZABO_CLIENT_ID`, `BIZZABO_CLIENT_SECRET`, `BIZZABO_ACCOUNT_ID`. Get them from your Bizzabo admin → **Integrations → API → OAuth2 Client Credentials**. Then pick the client you're using below.
+
+## Use with Claude (Desktop or Code)
+
+Drop this into `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows), or `~/.config/claude/mcp.json` for Claude Code:
 
 ```json
 {
@@ -24,22 +28,178 @@ Use directly via `npx` (no install needed):
 }
 ```
 
-Or install globally:
+Restart Claude. Ask "list my Bizzabo events" — it should call `list_events`.
+
+## Use with ChatGPT
+
+MCP works with ChatGPT two different ways depending on what you have:
+
+### Option A — ChatGPT Desktop (Developer Mode, Plus/Pro/Team/Enterprise)
+
+OpenAI's Desktop app added local MCP support via Developer Mode.
+
+1. In ChatGPT Desktop → **Settings → Connectors → Advanced** → enable **Developer Mode**.
+2. **Settings → Connectors → Create** → choose **Local MCP server**.
+3. Fill in:
+   - **Name:** `Bizzabo`
+   - **Command:** `npx`
+   - **Arguments:** `-y @capitalthought/bizzabo-mcp`
+   - **Environment variables:** add `BIZZABO_CLIENT_ID`, `BIZZABO_CLIENT_SECRET`, `BIZZABO_ACCOUNT_ID`
+4. Save, then toggle the connector **on** in the new-chat composer.
+5. Ask "list my upcoming Bizzabo events" — you'll see tool-call cards for `list_events` etc.
+
+> Note: Local MCP connectors only work in the Desktop app (not chatgpt.com in a browser). The set of plans that can enable Developer Mode has shifted over time — if you don't see the setting, check OpenAI's connector docs for your plan.
+
+### Option B — OpenAI Agents SDK (for developers)
+
+If you're building on top of OpenAI's API, the [Agents SDK](https://openai.github.io/openai-agents-python/mcp/) can launch the MCP server directly.
+
+**Python:**
+
+```python
+from agents import Agent, Runner
+from agents.mcp import MCPServerStdio
+
+async def main():
+    async with MCPServerStdio(
+        name="bizzabo",
+        params={
+            "command": "npx",
+            "args": ["-y", "@capitalthought/bizzabo-mcp"],
+            "env": {
+                "BIZZABO_CLIENT_ID": "...",
+                "BIZZABO_CLIENT_SECRET": "...",
+                "BIZZABO_ACCOUNT_ID": "...",
+            },
+        },
+    ) as bizzabo:
+        agent = Agent(
+            name="Event Assistant",
+            instructions="Use Bizzabo to answer questions about events.",
+            mcp_servers=[bizzabo],
+        )
+        result = await Runner.run(agent, "List the next 5 events.")
+        print(result.final_output)
+```
+
+**TypeScript (`@openai/agents`):**
+
+```ts
+import { Agent, run, MCPServerStdio } from "@openai/agents";
+
+const bizzabo = new MCPServerStdio({
+  name: "bizzabo",
+  command: "npx",
+  args: ["-y", "@capitalthought/bizzabo-mcp"],
+  env: {
+    BIZZABO_CLIENT_ID: "...",
+    BIZZABO_CLIENT_SECRET: "...",
+    BIZZABO_ACCOUNT_ID: "...",
+  },
+});
+
+await bizzabo.connect();
+const agent = new Agent({
+  name: "Event Assistant",
+  instructions: "Use Bizzabo to answer questions about events.",
+  mcpServers: [bizzabo],
+});
+console.log((await run(agent, "List the next 5 events.")).finalOutput);
+await bizzabo.close();
+```
+
+## Use with Gemini
+
+### Option A — Gemini CLI (recommended)
+
+Install the CLI if you haven't: `npm install -g @google/gemini-cli`.
+
+Add to `~/.gemini/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "bizzabo": {
+      "command": "npx",
+      "args": ["-y", "@capitalthought/bizzabo-mcp"],
+      "env": {
+        "BIZZABO_CLIENT_ID": "...",
+        "BIZZABO_CLIENT_SECRET": "...",
+        "BIZZABO_ACCOUNT_ID": "..."
+      }
+    }
+  }
+}
+```
+
+Then run `gemini` and ask "what Bizzabo events are coming up?".
+
+### Option B — Gemini API via Python SDK (for developers)
+
+The `google-genai` SDK auto-translates MCP tool listings into Gemini function-calls:
+
+```python
+import asyncio
+from google import genai
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
+client = genai.Client()
+
+async def main():
+    params = StdioServerParameters(
+        command="npx",
+        args=["-y", "@capitalthought/bizzabo-mcp"],
+        env={
+            "BIZZABO_CLIENT_ID": "...",
+            "BIZZABO_CLIENT_SECRET": "...",
+            "BIZZABO_ACCOUNT_ID": "...",
+        },
+    )
+    async with stdio_client(params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            response = await client.aio.models.generate_content(
+                model="gemini-2.0-flash",
+                contents="List the next 5 Bizzabo events.",
+                config=genai.types.GenerateContentConfig(
+                    tools=[session],
+                ),
+            )
+            print(response.text)
+
+asyncio.run(main())
+```
+
+The same pattern works with Google's **Agent Development Kit (ADK)** — register the stdio server as a toolset in your `Agent` config.
+
+## Use with other MCP clients
+
+Any MCP client that speaks stdio works with the same three pieces:
+
+- **Command:** `npx`
+- **Args:** `["-y", "@capitalthought/bizzabo-mcp"]`
+- **Env:** `BIZZABO_CLIENT_ID`, `BIZZABO_CLIENT_SECRET`, `BIZZABO_ACCOUNT_ID`
+
+Known-working clients at the time of writing: Claude Desktop, Claude Code, Cursor, Windsurf, Zed, Cline, Continue, OpenAI Agents SDK, Gemini CLI, Google ADK.
+
+## Install globally (optional)
+
+If you prefer an installed binary over `npx`:
 
 ```bash
 npm install -g @capitalthought/bizzabo-mcp
+# then use "command": "bizzabo-mcp" in any MCP config above
 ```
 
-## Configure
+## Environment variables
 
-Three env vars, all required. Get them from your Bizzabo admin — **Integrations → API → OAuth2 Client Credentials**.
-
-| Variable | Description |
-|----------|-------------|
-| `BIZZABO_CLIENT_ID` | OAuth2 client ID |
-| `BIZZABO_CLIENT_SECRET` | OAuth2 client secret |
-| `BIZZABO_ACCOUNT_ID` | Numeric account ID |
-| `DEBUG` | Optional. Set to `1` to log OAuth + request details to stderr |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `BIZZABO_CLIENT_ID` | ✅ | OAuth2 client ID |
+| `BIZZABO_CLIENT_SECRET` | ✅ | OAuth2 client secret |
+| `BIZZABO_ACCOUNT_ID` | ✅ | Numeric account ID |
+| `DEBUG` | — | Set to `1` to log OAuth + request details to stderr |
 
 ## Tools
 
